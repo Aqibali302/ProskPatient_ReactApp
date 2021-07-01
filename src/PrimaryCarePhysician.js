@@ -36,6 +36,7 @@ import Loader from 'react-loader-spinner'
 import CustomizedSnackbar from './customizesnackbar/CustomizedSnackbar.js'
 import MenuItem from "@material-ui/core/MenuItem";
 import InputMask from "react-input-mask";
+import ReactOverlayLoader  from "reactjs-overlay-loader";
 const styles = (theme) => ({
   root: {
     flexGrow: 1,
@@ -147,37 +148,17 @@ class PrimaryCarePhysician extends Component {
       selected: "",
       SelectedListId:"",
       filteredData:[],
+      isSavedCalled:true,
+      isSavedCalled2:true,
     };
   }
 
   handleChange = event => {
     this.setState({ filter: event.target.value });
   };
-
-  // GetPhysicianData=()=>{
-  //   let url=localStorage.getItem("url") +"/mobile/MobileGetPhysicianSateListJSON";
-  //   fetch(url, {
-  //     method: "POST",
-  //     // body: JSON.stringify(data),
-  //   })
-  //   .then((res) => {
-  //     if (!res.ok) {
-  //       throw res;
-  //     }
-  //     return res.json();
-  //   })
-  //   .then((result) => {
-  //     console.log(result);
-  //     this.setState({
-  //       physician_dropdown:result["Physician_State_list"],
-  //     });
-
-  //   })
-  //   .catch((error) => alert("An error occured: " + error));
-  // }
-
   GetExistingData=()=>{
-    let url=localStorage.getItem("url") +"/mobile/MobileGetPhysicianList?physican_id="+this.state.LastPID;
+    var ziptext=this.state.ZipCode.replace("-","")
+    let url=localStorage.getItem("url") +"/mobile/MobileGetPhysicianList?physican_id="+this.state.LastPID+"&postal_code="+ziptext;
     fetch(url, {
       method: "POST",
       // body: JSON.stringify(data),
@@ -190,6 +171,9 @@ class PrimaryCarePhysician extends Component {
     })
     .then((result) => {
       console.log(result);
+      this.setState({
+        isSavedCalled:false
+      });
       console.log(url);
       this.setState({
         PhysisanData:result["Physician_list"],
@@ -202,18 +186,23 @@ class PrimaryCarePhysician extends Component {
             SelectedListId:this.state.PhysisanData[i]["id"],
             selected :this.state.PhysisanData[i]["id"],
             filter: this.state.PhysisanData[i]["name"]
-          });
-        //  this.handleChange2();
-          
+          }); 
         }
       }
     })
-    .catch((error) => alert("An error occured: " + error));
+    .catch((error) =>{
+      this.setState({
+        isSavedCalled:false
+      });
+      alert("An error occured: " + error)
+    })
   }
 
   GetData=()=>{
-    let url=localStorage.getItem("url") +"/mobile/MobileGetPhysicianList?postal_code="+this.state.ZipCode+
+    var ziptext=this.state.ZipCode.replace("-","")
+    let url=localStorage.getItem("url") +"/mobile/MobileGetPhysicianList?postal_code="+ziptext+
     "&state="+this.state.state_val+"&provider_name="+this.state.filter;
+    console.log(url);
     fetch(url, {
       method: "POST",
       // body: JSON.stringify(data),
@@ -227,8 +216,10 @@ class PrimaryCarePhysician extends Component {
     .then((result) => {
       console.log(result);
       this.setState({
+        isSavedCalled:false
+      });
+      this.setState({
         PhysisanData:result["Physician_list"],
-
     });
     for (var i = 0; i < this.state.PhysisanData.length; i++) {
         if ( this.state.LastPID== this.state.PhysisanData[i]["id"]) {
@@ -242,7 +233,12 @@ class PrimaryCarePhysician extends Component {
         }
       }
     })
-    .catch((error) => alert("An error occured: " + error));
+    .catch((error) =>{
+      this.setState({
+        isSavedCalled:false
+      });
+      alert("An error occured: " + error)
+    })
   }
   renderStateOptions() {
     return this.state.physician_dropdown.map((dt, i) => {
@@ -269,10 +265,14 @@ class PrimaryCarePhysician extends Component {
 
 
   handleSubmit=(event)=>{
-    if(this.state.state_val!=""){
+    if(this.state.state_val!="" || this.state.ZipCode!=""){
         if(this.state.SelectedListId!=""){
+          this.setState({
+            isSavedCalled:true
+          });
+          var ziptext=this.state.ZipCode.replace("-","")
             let url =localStorage.getItem('url') + "/mobile/MobileUpdatePrimaryCarePhysician?user_id="+this.state.UserId
-            +"&physician_id="+this.state.SelectedListId+"&zip_code="+this.state.ZipCode+"&state="+this.state.state_val;
+            +"&physician_id="+this.state.SelectedListId+"&zip_code="+ziptext+"&state="+this.state.state_val;
             console.log(url);
             fetch(url, {
               method: "POST",
@@ -287,20 +287,35 @@ class PrimaryCarePhysician extends Component {
               .then((result) => {
                 console.log(result);
                 if (result.success == "1") {
+                  this.setState({
+                    isSavedCalled:false
+                  });
                   window.location = "#/Home";
                 }else{
+                  this.setState({
+                    isSavedCalled:false
+                  });
                   alert(result.error)
                 }
               })
-              .catch((error) => this.handleOpenSnackbar(<span>An error occured:</span>,
-                "error"
-            ));
+              .catch((error) =>{
+                this.setState({
+                  isSavedCalled:false
+                });
+                alert("An error occured: " + error)
+              })
         }else{
+          this.setState({
+            isSavedCalled:false
+          });
             alert("Please Select Primary Care Physician from the list");
         }
       
     }else{
-      alert("Please Select State")
+      this.setState({
+        isSavedCalled:false
+      });
+      alert("Please select state or provide zip code");
     }
 
 
@@ -308,11 +323,24 @@ class PrimaryCarePhysician extends Component {
   componentDidMount() {
     //  // this.getIpAddress();
     //   this.GetPhysicianData();
+    console.log("aqib");
+    console.log(this.state.LastPID);
+    console.log(this.state.LastCode);
+    console.log(this.state.LastState);
           if(this.state.LastPID!=""){
-        this.state.state_val=this.state.LastState
-        this.state.ZipCode=this.state.LastCode
-        this.GetExistingData();
-        
+            if(this.state.LastState!=""){
+              this.state.state_val=this.state.LastState
+              this.state.ZipCode=this.state.LastCode
+              this.GetExistingData();
+            }else{
+              this.state.ZipCode=this.state.LastCode
+              this.GetExistingData();
+            }
+
+    }else{
+      this.setState({
+        isSavedCalled:false
+      });
     }
      
 
@@ -356,26 +384,29 @@ ZipCode = (event) => {
   };
   filterHandler = () => {
       if(this.state.filter.length<4){
-          alert("Please enter atleast 4 character in primary care provider textfield");
-      }else{
-        this.GetData();
-        // const { filter, PhysisanData } = this.state;
-        // const lowercasedFilter = filter.toLowerCase();
-        //  this.state.filteredData= this.state.PhysisanData.filter(item => {
-        //     return Object.keys(item).some(key =>
-        //       item[key].toLowerCase().includes(lowercasedFilter)
-        //     );
-        //   });
-    
-        // let highlightFD = [];
-        // this.state.filteredData.map((values, index) => {
-        //   highlightFD.push({ ...values
-        //   });
-        // })
-        // this.setState({
-        //     filteredData: highlightFD
-        // });
-      }
+        alert("Please enter atleast 4 character in primary care provider textfield");
+    }else{
+      this.setState({
+        isSavedCalled:true
+      });
+      this.GetData();
+      // const { filter, PhysisanData } = this.state;
+      // const lowercasedFilter = filter.toLowerCase();
+      //  this.state.filteredData= this.state.PhysisanData.filter(item => {
+      //     return Object.keys(item).some(key =>
+      //       item[key].toLowerCase().includes(lowercasedFilter)
+      //     );
+      //   });
+  
+      // let highlightFD = [];
+      // this.state.filteredData.map((values, index) => {
+      //   highlightFD.push({ ...values
+      //   });
+      // })
+      // this.setState({
+      //     filteredData: highlightFD
+      // });
+    }      
    
 
   };
@@ -417,8 +448,15 @@ ZipCode = (event) => {
       </AppBar>
       <div style={{ marginTop: "60px" }}>
         <Card style={{ width: "98%",margin:"auto" }}>
-         
             <CardContent>
+            <ReactOverlayLoader 
+      loaderContent={<span style={{ color: "#ffffff" }}> Please wait...</span>}
+      isActive={this.state.isSavedCalled}
+      iconType='TailSpin'
+      style={{
+        backgroundColor: "rgb(47 46 46 / 81%)"
+      }}
+    >
               <Grid container spacing={2}>
                 <Grid item xs={12} align="center">
                   <Typography variant="title" color="primary"></Typography>
@@ -429,7 +467,7 @@ ZipCode = (event) => {
                   variant="title"
                   style={{ marginBottom: "10px" ,marginTop: "60px",fontSize:"16px",fontFamily:"arial",fontWeight:"bold"  }}
                 >
-                 Please select state and search your primary care physician from the list below
+                 Please select the state or provide zip code and press search
                 </Typography>
                 </Grid>
                 <Grid item xs={12} sm={3}>
@@ -476,14 +514,14 @@ ZipCode = (event) => {
                   <Divider classes={{root: classes.divider2}} />
                   <br/>
                   <Grid item xs={12} sm={4} >
-                  <InputLabel htmlFor="standard-adornment-password">Primary Care Physician Name</InputLabel>
-                  <Input
+                  
+                  <TextField
                         id="standard-adornment-password"
                         ref={(input) => { this.nameInput = input; }} 
                         value={this.state.filter}
-                        
+                        label="Search Physician"
                       onChange={this.filter}
-                        style={{width:"95%",marginLeft:"10px"}}
+                        style={{width:"95%",height: "5%",marginTop:"-1px"}}
           />
                  
                   </Grid>
@@ -500,14 +538,24 @@ ZipCode = (event) => {
                                      </Button> 
                   </Grid>
                 
-                <Grid item xs={12} sm={12}>
+                <Grid item xs={12} sm={12} style={{marginTop:"7px"}}>
+                {this.state.PhysisanData!=""?<div>
+                <Divider style={{marginBottom:"9px"}} />
+                <Typography
+                  style={{ textAlign: "left" }}
+                  variant="title"
+                  style={{ marginBottom: "10px" ,marginTop: "60px",fontSize:"16px",fontFamily:"arial",fontWeight:"bold"  }}
+                >
+                 Please select primary care physician from the list
+                </Typography>
+                </div>:<div></div>}
                 {this.state.PhysisanData!=""?this.state.PhysisanData.map((data,index)=>
                  <Fragment key={"doc_type"+index}>
                  {index ? <Divider variant="fullWidth" /> : ""}
                  <ListItem 
                          button
                          selected={this.state.SelectedDate==data.id}
-                         style={{backgroundColor: this.state.selected == data.id ? "teal" : "",}}
+                         style={{backgroundColor: this.state.selected == data.id ? "teal" : "",marginTop:"11px"}}
                          onClick={() => this.changeColor2(this.state.selected,data.id)}
                         >
                           <span style={{fontSize:".9rem", padding:8,color: this.state.selected == data.id ? "white" : "black"}}>
@@ -523,6 +571,7 @@ ZipCode = (event) => {
                 ):<div></div>}
             </Grid>
               </Grid>
+              </ReactOverlayLoader>
             </CardContent>
         
         </Card>
@@ -534,13 +583,12 @@ ZipCode = (event) => {
         >
           <Toolbar variant="dense">
             <div className={classes.grow} />
-            {this.state.isSavedCalled?      <Loader type="TailSpin" color="#00BFFF" height={80} width={80}/>:
+          
                         <Button  variant="contained" color="primary"
                         onClick={this.handleSubmit}
                       >
                         Continue
                         </Button>
-            }
           </Toolbar>
         </AppBar>
       </div>
